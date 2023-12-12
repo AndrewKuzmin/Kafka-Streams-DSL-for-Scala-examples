@@ -1,17 +1,16 @@
 package com.phylosoft.learning.kafka.streams
 
-import java.time.Duration
-import java.util.Properties
-import java.util.concurrent.TimeUnit
-
 import org.apache.kafka.streams.kstream.Materialized
 import org.apache.kafka.streams.scala.ImplicitConversions._
 import org.apache.kafka.streams.scala._
 import org.apache.kafka.streams.scala.kstream._
+import org.apache.kafka.streams.scala.serialization.Serdes
 import org.apache.kafka.streams.{KafkaStreams, StreamsConfig}
 
-object WordCountApp extends App {
+import java.time.Duration
+import java.util.Properties
 
+object WordCountApp extends App {
   import Serdes._
 
   val props: Properties = {
@@ -22,14 +21,11 @@ object WordCountApp extends App {
   }
 
   val builder: StreamsBuilder = new StreamsBuilder
-
   val textLines: KStream[String, String] = builder.stream[String, String]("TextLinesTopic")
-
   val wordCounts: KTable[String, Long] = textLines
     .flatMapValues(textLine => textLine.toLowerCase.split("\\W+"))
     .groupBy((_, word) => word)
     .count()(Materialized.as("counts-store"))
-
   wordCounts.toStream.to("WordsWithCountsTopic")
 
   val streams: KafkaStreams = new KafkaStreams(builder.build(), props)
